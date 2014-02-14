@@ -55,6 +55,8 @@
   :type 'integer
   :group 'ac-ispell)
 
+(defvar ac-ispell--cache nil)
+
 (defun ac-ispell--case-function (input)
   (let ((case-fold-search nil))
     (cond ((string-match-p "\\`[A-Z]\\{2\\}" input) 'upcase)
@@ -71,6 +73,17 @@
       (mapcar case-func
               (funcall lookup-func (concat input "*") ispell-complete-word-dict)))))
 
+(defun ac-ispell--candidates-cached ()
+  (let* ((cached-prefix (car ac-ispell--cache))
+         (cached-candidates (cdr ac-ispell--cache))
+         (match (and cached-prefix
+                     (eq 0 (string-match cached-prefix ac-prefix)))))
+    (if match
+        cached-candidates
+      (let ((candidates (ac-ispell--candidates)))
+        (setq ac-ispell--cache (cons ac-prefix candidates))
+        candidates))))
+
 ;;;###autoload
 (defun ac-ispell-ac-setup ()
   "Add `ac-source-ispell' to `ac-sources' and enable `auto-complete' mode"
@@ -86,6 +99,11 @@
 
   (ac-define-source ispell
     `((candidates . ac-ispell--candidates)
+      (requires . ,ac-ispell-requires)
+      (symbol . "s")))
+
+  (ac-define-source ispell-cached
+    `((candidates . ac-ispell--candidates-cached)
       (requires . ,ac-ispell-requires)
       (symbol . "s"))))
 
